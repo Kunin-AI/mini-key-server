@@ -21,13 +21,13 @@
 
 from flask_wtf import FlaskForm
 from wtforms import (BooleanField, IntegerField, PasswordField, SelectField,
-                     StringField, SubmitField)
-from wtforms.validators import required
+                     StringField, SubmitField, DateField)
+from wtforms.validators import required, optional, DataRequired
 
 
 class LoginForm(FlaskForm):
-    username = StringField("Username", [required()])
-    password = PasswordField("Password", [required()])
+    username = StringField("Username", [DataRequired()])
+    password = PasswordField("Password", [DataRequired()])
     submit = SubmitField("Log In")
 
 
@@ -39,6 +39,7 @@ class KeyForm(FlaskForm):
     application = SelectField("Application", coerce=int)
 
     active = BooleanField("Active", default=True)
+    valid_until = DateField("Expire On", validators=[optional()])
     memo = StringField("Memo")
     hwid = StringField("Hardware Id")
     submit = SubmitField("Submit")

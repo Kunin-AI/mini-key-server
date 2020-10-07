@@ -25,7 +25,7 @@ from flask import request
 from flask_restful import Api, Resource, reqparse
 
 from keyserv.keymanager import (Origin, activate_key_unsafe, key_exists_const,
-                                key_get_unsafe, key_valid_const)
+                                key_get_unsafe, key_valid_const, key_still_valid)
 from keyserv.models import Application
 
 api = Api()
@@ -48,21 +48,19 @@ class ActivateKey(Resource):
         parser.add_argument("user", required=True)
         parser.add_argument("app_id", required=True, type=int)
         parser.add_argument("hwid", required=True)
-
+        parser.add_argument("valid_until", required=True)
         args = parser.parse_args()
 
         origin = Origin(request.remote_addr, args.machine,
                         args.user, args.hwid)
 
         if not key_exists_const(args.app_id, args.token, origin):
-
             resp = {"result": "failure", "error": "invalid activation token",
                     "support_message": None}
             if args.app_id:
                 app = Application.query.get(args.app_id)
                 if app and app.support_message:
                     resp["support_message"] = app.support_message
-
             return resp, 404
 
         key = key_get_unsafe(args.app_id, args.token, origin)
@@ -70,13 +68,18 @@ class ActivateKey(Resource):
         if key.remaining == 0:
             resp = {"result": "failure", "error": "key is out of activations",
                     "support_message": key.app.support_message}
+            return resp, 410
 
+        if not key_still_valid(key):
+            resp = {"result": "failure", "error": "key is no longer valid",
+                    "support_message": key.app.support_message}
             return resp, 410
 
         activate_key_unsafe(args.app_id, args.token, origin)
 
         return {"result": "ok",
-                "remainingActivations": str(key.remaining)}, 201
+                "remainingActivations": str(key.remaining),
+                "expiresOn": str(key.valid_until)}, 201
 
 
 class CheckKey(Resource):
@@ -84,21 +87,25 @@ class CheckKey(Resource):
 
     def get(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("token", required=True)
-        parser.add_argument("machine", required=True)
-        parser.add_argument("user", required=True)
-        parser.add_argument("hwid", required=True)
-        parser.add_argument("app_id", required=True, type=int)
+        parser.add_argument("token", required=True, location='args')
+        parser.add_argument("machine", required=True, location='args')
+        parser.add_argument("user", required=True, location='args')
+        parser.add_argument("hwid", required=True, location='args')
+        parser.add_argument("app_id", required=True, type=int, location='args')
 
         args = parser.parse_args()
 
         origin = Origin(request.remote_addr,
                         args.machine, args.user, args.hwid)
 
-        if key_valid_const(args.app_id, args.token, origin):
+        possibly_valid_key = key_valid_const(args.app_id, args.token, origin)
+        if possibly_valid_key and key_still_valid(possibly_valid_key):
             return {"result": "ok"}, 201
 
-        return {"result": "failure", "error": "invalid key"}, 404
+        if not possibly_valid_key:
+            return {"result": "failure", "error": "invalid key"}, 404
+        else:
+            return {"result": "failure", "error": "invalid key; expired f{possibly_valid_key.valid_until}"}, 404
 
 
 api.add_resource(ActivateKey, "/api/activate")

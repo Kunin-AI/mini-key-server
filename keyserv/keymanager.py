@@ -46,11 +46,12 @@ class KeyNotFound(Exception):
 class Origin:
     """Origin that identifies a key action."""
 
-    def __init__(self, ip, machine, user, hardware_id=None):
+    def __init__(self, ip, machine, user, hardware_id=None, valid_until="30"):
         self.ip = ip
         self.machine = machine
         self.user = user
         self.hwid = hardware_id
+        self.valid_until = valid_until
 
     def __str__(self):
         return f"IP: {self.ip}, Machine: {self.machine}, User: {self.user}"
@@ -163,7 +164,7 @@ def key_exists_const(app_id: int, token: str, origin: Origin) -> bool:
     return found
 
 
-def key_valid_const(app_id: int, token: str, origin: Origin) -> bool:
+def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
     """Constant time check to see if `token` exists in the database. Compares
     against all keys even if a match is found. Validates against the app id
     and the hardware id provided."""
@@ -174,12 +175,18 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> bool:
                 key.enabled and key.app_id == app_id
                 and compare_digest(origin.hwid, key.hwid)):
 
-            found = True
+            found = key
             key.last_check_ts = datetime.utcnow()
             key.last_check_ip = origin.ip
             key.total_checks += 1
             AuditLog.from_key(key, f"key check from {origin}", Event.KeyAccess)
     return found
+
+def key_still_valid(key: Key) -> bool:
+    if not key or (key.valid_until and key.valid_until > datetime.utcnow()):
+        return False
+    else: # key and (not key.valid_until or key.valid_until > datetime.utcnow()):
+        return True
 
 def key_get_unsafe(app_id: int, token: str, origin) -> Key:
     """Get a key by its token using constant time comparison."""

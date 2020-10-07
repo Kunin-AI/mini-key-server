@@ -43,6 +43,7 @@
             <th>Active</th>
             <th>Remaining Activations</th>
             <th>Cut Date</th>
+            <th>Expiration</th>
             <th>Memo</th>
             <th>Modify</th>
         </tr>
@@ -60,6 +61,11 @@
                         {{ key.remaining }}
                         {% endif %}</td>
                 <td>{{ key.cutdate.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{% if key.valid_until %}
+                        {{ key.valid_until.strftime('%Y-%m-%d %H:%M:%S') }}
+                        {% else %}
+                        Not set
+                        {% endif %}</td>
                 <td>{{ key.memo }}</td>
                 <td><a href="{{ url_for('frontend.modify_key', key_id=key.id) }}"
                        class="btn btn-info">

@@ -20,22 +20,108 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import IntEnum
 from typing import Any  # NOQA: F401
+from flask_caching import Cache
 
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import event
+from flask_sqlalchemy import SQLAlchemy, Model
+# from flask_bcrypt import Bcrypt
+from keyserv.uuidgenerator import UUIDGenerator
 
-db = SQLAlchemy()  # type: Any
+basestring = (str, bytes)
+# bcrypt = Bcrypt()
+cache = Cache()
+
+class CRUDMixin(Model):
+    """Mixin that adds convenience methods for CRUD (create, read, update, delete) operations."""
+
+    @classmethod
+    def create(cls, **kwargs):
+        """Create a new record and save it the database."""
+        instance = cls(**kwargs)
+        return instance.save()
+
+    def update(self, commit=True, **kwargs):
+        """Update specific fields of a record."""
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+        return commit and self.save() or self
+
+    def save(self, commit=True):
+        """Save the record."""
+        db.session.add(self)
+        if commit:
+            db.session.commit()
+        return self
+
+    def delete(self, commit=True):
+        """Remove the record from the database."""
+        db.session.delete(self)
+        return commit and db.session.commit()
 
 
-class Application(db.Model):
+db = SQLAlchemy(model_class=CRUDMixin)
+
+
+# From Mike Bayer's "Building the app" talk
+# https://speakerdeck.com/zzzeek/building-the-app
+class SurrogatePK(object):
+    """A mixin that adds a surrogate integer 'primary key' column named ``id`` \
+        to any declarative-mapped class.
+    """
+
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.CHAR(36), index=True)
+
+    @classmethod
+    def get_by_id(cls, record_id):
+        """Get record by ID."""
+        if any(
+                (isinstance(record_id, basestring) and record_id.isdigit(),
+                 isinstance(record_id, (int, float))),
+        ):
+            return cls.query.get(int(record_id))
+
+    @classmethod
+    def get_by_uuid(cls, record_uuid):
+        """Get record by UUID."""
+        from keyserv.uuidgenerator import UUIDGenerator
+        return cls.query.get(int(UUIDGenerator.uuid_to_int(str(record_uuid))))
+
+
+def reference_col(tablename, nullable=False, pk_name='id', **kwargs):
+    """Column that adds primary key foreign key reference.
+
+    Usage: ::
+
+        category_id = reference_col('category')
+        category = relationship('Category', backref='categories')
+    """
+    return db.Column(
+        db.ForeignKey('{0}.{1}'.format(tablename, pk_name)),
+        nullable=nullable, **kwargs)
+
+
+class Application(db.Model, SurrogatePK):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
     support_message = db.Column(db.String)
 
+    def __init__(self, name, support_message):
+        self.name = name
+        self.support_message = support_message
 
-class Key(db.Model):
+@event.listens_for(Application, 'after_insert')
+def after_insert(_, connection, target):
+    if not target.uuid:  # Generate UUID
+        myuuid = UUIDGenerator.int_to_uuid(target.id).hex
+        connection.execute(Application.__table__.update().where(Application.id == target.id).values(uuid=myuuid))
+
+class Key(db.Model, SurrogatePK):
     """
     Database representation of a software key provided by MKS.
 
@@ -60,18 +146,30 @@ class Key(db.Model):
     last_activation_ip = db.Column(db.String)
     last_check_ts = db.Column(db.DateTime)
     last_check_ip = db.Column(db.String)
+    valid_until = db.Column(db.DateTime(timezone=True))
 
     def __init__(self, token: str, remaining: int, app_id: int,
-                 enabled: bool = True, memo: str = "", hwid: str = "") -> None:
+                 enabled: bool = True, memo: str = "", hwid: str = "", expiry_date: str = "30") -> None:
         self.token = token
         self.remaining = remaining
         self.enabled = enabled
         self.memo = memo
         self.app_id = app_id
         self.hwid = hwid
+        if expiry_date.isnumeric():
+            self.valid_until = datetime.utcnow() + timedelta(days=int(expiry_date))
+        else:
+            from dateutil.parser import parse
+            self.valid_until = parse(expiry_date)
 
     def __str__(self):
-        return f"<Key({self.token})>"
+        return f"<Key({self.token}) valid until {self.valid_until}>"
+
+@event.listens_for(Key, 'after_insert')
+def after_insert(_, connection, target):
+    if not target.uuid:  # Generate UUID
+        myuuid = UUIDGenerator.int_to_uuid(target.id).hex
+        connection.execute(Key.__table__.update().where(Key.id == target.id).values(uuid=myuuid))
 
 
 class Event(IntEnum):
@@ -87,7 +185,7 @@ class Event(IntEnum):
     AppModified = 9
 
 
-class AuditLog(db.Model):
+class AuditLog(db.Model, SurrogatePK):
     """
     Database representation of an audit log.
     """
@@ -110,6 +208,13 @@ class AuditLog(db.Model):
 
     @classmethod
     def from_key(cls, key: Key, message: str, event_type: Event):
-        audit = cls(key.id, key.app.id, message, event_type)
-        db.session.add(audit)
-        db.session.commit()
+        # audit = cls(key.id, key.app.id, message, event_type)
+        cls(key.id, key.app.id, message, event_type).save()
+        # db.session.add(audit)
+        # db.session.commit()
+
+@event.listens_for(AuditLog, 'after_insert')
+def after_insert(_, connection, target):
+    if not target.uuid:  # Generate UUID
+        myuuid = UUIDGenerator.int_to_uuid(target.id).hex
+        connection.execute(AuditLog.__table__.update().where(AuditLog.id == target.id).values(uuid=myuuid))
