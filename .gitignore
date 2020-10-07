@@ -110,6 +110,9 @@ keyserver/config.py
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# intellij
+.idea/*
+
 keyserver.log*
 keyserv/config.py
 
