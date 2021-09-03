@@ -111,7 +111,7 @@ class Application(db.Model, SurrogatePK):
     name = db.Column(db.String, nullable=False, unique=True)
     support_message = db.Column(db.String)
 
-    def __init__(self, name, support_message):
+    def __init__(self, name=None, support_message=None):
         self.name = name
         self.support_message = support_message
 
