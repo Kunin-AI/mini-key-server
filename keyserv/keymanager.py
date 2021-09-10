@@ -183,7 +183,7 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
     return found
 
 def key_still_valid(key: Key) -> bool:
-    if not key or (key.valid_until and key.valid_until > datetime.utcnow()):
+    if not key or (key.valid_until and key.valid_until < datetime.utcnow()):
         return False
     else: # key and (not key.valid_until or key.valid_until > datetime.utcnow()):
         return True
