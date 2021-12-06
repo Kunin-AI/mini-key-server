@@ -54,8 +54,16 @@
                 {% endif %}</li>
                 <li class="list-group-item"><b>Cut On:</b>
                     {{ key.cutdate|datetime }}</li>
+                <li class="list-group-item"><b>Expiry:</b>
+                    {% if key.valid_until %}
+                        {{ key.valid_until }}
+                    {% elif key.ttl %}
+                        {{ key.ttl }} days remaining
+                    {% else %}
+                    Unset
+                    {% endif %}
+                </li>
                 {% if key.memo %}
-                <li class="list-group-item"><b>Expiry:</b> {{ key.valid_until if key.valid_until else "Unset" }}</li>
                 <li class="list-group-item"><b>Memo:</b> {{ key.memo }}</li>
                 {% endif %}
                 <li class="list-group-item"><b>Lifetime Activations:</b>
