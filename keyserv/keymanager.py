@@ -210,7 +210,7 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
 
     current_app.logger.info(f"key activation check for user {email} from client {kunin_client_id} at {origin}")
 
-    user_details = {"user": {"email": email, "password": password}}
+    user_details = {"user": {"email": email, "password": password, "client_id": key.kunin_client_id}}
     new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=user_details)
 
     if new_kunin_user.status_code == 201:
