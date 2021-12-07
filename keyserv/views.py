@@ -153,8 +153,8 @@ def add_key(app_id=None):
 
     if request.method == "POST" and form.validate_on_submit():
         try:
-            token = cut_key_unsafe(form.activations.data,
-                                   form.application.data,
+            token = cut_key_unsafe(form.activations.data, form.application.data,
+                                   form.kunin_client_id.data,
                                    form.active.data, form.memo.data)
             flash(f"Key added! Token: {token}", "success")
         except Exception as error:
