@@ -29,7 +29,7 @@ from flask import current_app, request
 from flask_login import current_user
 from sqlalchemy import exists
 
-from keyserv.models import AuditLog, Event, Key, db
+from keyserv.models import AuditLog, Event, Key, Activation, db
 
 
 class ExhaustedActivations(Exception):
@@ -183,13 +183,16 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
     return found
 
 
-def key_still_valid(key: Key) -> bool:
+def key_still_valid(key: Key, activation: Activation = None) -> bool:
     from datetime import timedelta
     if not key or (key.valid_until and key.valid_until < datetime.utcnow()) or (
             key.ttl and key.cutdate + timedelta(days=key.ttl) < datetime.utcnow()):
         return False
-    else:
+    elif not activation or (activation in key.activations and activation.valid_until and
+                            activation.valid_until < datetime.utcnow()):
         return True
+    else:
+        return False
 
 
 def key_get_unsafe(app_id: int, token: str, origin) -> Key:
@@ -220,13 +223,15 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
     return None
 
 
-def activate_key_unsafe(app_id: int, token: str, origin: Origin):
+def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin: Origin) -> Activation:
     """Mark a key as activated by its token. Does not perform constant time
     comparisons.
 
     `ip`, `machine`, and `user` are of the originating activation attempt.
     """
     key = Key.query.filter_by(token=token, app_id=app_id, enabled=True).first()
+    activation = None
+    valid_or_ttl = key.valid_until if not key.ttl else key.ttl
 
     if key.remaining == -1:
         key.hwid = origin.hwid
@@ -247,6 +252,8 @@ def activate_key_unsafe(app_id: int, token: str, origin: Origin):
         raise ExhaustedActivations(
             f"token {token} has exhausted all remaining activations")
 
+    if key.remaining:  # if we can activate, we activate
+        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl).save()
     key.remaining -= 1
 
     current_app.logger.info(f"new activation: Key {key!r} from {origin}."
@@ -261,3 +268,4 @@ def activate_key_unsafe(app_id: int, token: str, origin: Origin):
         key, f"new activation from {origin}", Event.AppActivation)
 
     db.session.commit()
+    return activation
