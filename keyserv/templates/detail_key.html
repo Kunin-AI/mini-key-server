@@ -75,6 +75,15 @@
                     {{ key.last_activation_ip }}</li>
                 {% endif %}
 
+                {% if key.activations %}
+                    <li class="list-group-item"><b>Activations</b><br>
+                    {% for activation in key.activations %}
+                        <li class="list-group-item">    Activated on {{ activation.activation_ts|datetime }} for Employee
+                        {{ activation.kunin_employee_id }} of Client {{ activation.kunin_client_id }} at
+                        {{ activation.activation_ip }}
+                    {% endfor %}
+                {% endif %}
+
 
                 <li class="list-group-item"><b>Hardware Id</b>:
                     {% if key.hwid %}
