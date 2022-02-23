@@ -117,8 +117,10 @@ class CheckKey(Resource):
         print('-----> KEY STILL VALID?', key_still_valid(possibly_valid_key, activation))
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
             from hmac import compare_digest
-            return {"result": "ok"}, 201 if not compare_digest(origin.hwid, possibly_valid_key.hwid) else \
-                {"result": "ok"}, 200
+            if not compare_digest(origin.hwid, possibly_valid_key.hwid):
+                return {"result": "ok"}, 201
+            else:
+                return {"result": "ok"}, 200
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
