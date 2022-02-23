@@ -48,7 +48,7 @@ class ActivateKey(Resource):
         parser.add_argument("user", required=True)
         parser.add_argument("app_id", required=True, type=int)
         parser.add_argument("hwid", required=True)
-        parser.add_argument("valid_until", required=True)
+        # parser.add_argument("valid_until", required=True)
         parser.add_argument("email")
         parser.add_argument("password")
         args = parser.parse_args()
