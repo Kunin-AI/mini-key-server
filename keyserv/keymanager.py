@@ -171,10 +171,7 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
     current_app.logger.info(f"key lookup by token {token} from {origin}")
     found = False
     for key in Key.query.all():
-        if (compare_digest(token, key.token) and
-                key.enabled and key.app_id == app_id
-                and compare_digest(origin.hwid, key.hwid)):
-
+        if compare_digest(token, key.token) and key.enabled and key.app_id == app_id:
             found = key
             key.last_check_ts = datetime.utcnow()
             key.last_check_ip = origin.ip
