@@ -24,6 +24,7 @@ import click
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_bootstrap import Bootstrap
+from flask_migrate import Migrate
 
 from .auth import login_manager, add_user
 from .endpoints import api
@@ -54,9 +55,11 @@ def create_app(config):
     app.jinja_env.filters["event"] = format_event
     app.jinja_env.filters["datetime"] = format_datetime
 
+    migrate = Migrate()
     Bootstrap(app)
     api.init_app(app)
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     app.register_blueprint(frontend)
