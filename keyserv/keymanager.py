@@ -29,10 +29,10 @@ from flask import current_app, request
 from flask_login import current_user
 from sqlalchemy import exists
 
-from keyserv.models import AuditLog, Event, Key, db
+from keyserv.models import AuditLog, Event, Key, Activation, db
 
 
-class ExhuastedActivations(Exception):
+class ExhaustedActivations(Exception):
     """Raised when an activation attempt is made but the remaining activations
     is already at 0."""
     pass
@@ -100,7 +100,7 @@ def generate_token_unsafe() -> str:
     return key
 
 
-def cut_key_unsafe(activations: int, app_id: int,
+def cut_key_unsafe(activations: int, app_id: int, kunin_client_id: int = 0,
                    active: bool = True, memo: str = "") -> str:
     """
     Cuts a new key and returns the activation token.
@@ -109,7 +109,7 @@ def cut_key_unsafe(activations: int, app_id: int,
     unlimited activations.
     """
     token = generate_token_unsafe()
-    key = Key(token, activations, app_id, active, memo)
+    key = Key(token, activations, app_id, active, memo, kunin_client_id=kunin_client_id)
     key.cutdate = datetime.utcnow()
 
     db.session.add(key)
@@ -182,31 +182,56 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
             AuditLog.from_key(key, f"key check from {origin}", Event.KeyAccess)
     return found
 
-def key_still_valid(key: Key) -> bool:
-    if not key or (key.valid_until and key.valid_until > datetime.utcnow()):
+
+def key_still_valid(key: Key, activation: Activation = None) -> bool:
+    from datetime import timedelta
+    if not key or (key.valid_until and key.valid_until < datetime.utcnow()) or (
+            key.ttl and key.cutdate + timedelta(days=key.ttl) < datetime.utcnow()):
         return False
-    else: # key and (not key.valid_until or key.valid_until > datetime.utcnow()):
+    elif not activation or (activation in key.activations and activation.valid_until and
+                            activation.valid_until < datetime.utcnow()):
         return True
+    else:
+        return False
+
 
 def key_get_unsafe(app_id: int, token: str, origin) -> Key:
     """Get a key by its token using constant time comparison."""
 
-    current_app.logger.info(f"key retreival by token {token} from {origin}")
+    current_app.logger.info(f"key retrieval by token {token} from {origin}")
 
     key = Key.query.filter_by(app_id=app_id, token=token, enabled=True).first()
     if key:
-        AuditLog.from_key(key, f"key retreival from {origin}", Event.KeyAccess)
+        AuditLog.from_key(key, f"key retrieval from {origin}", Event.KeyAccess)
         return key
     return None
 
 
-def activate_key_unsafe(app_id: int, token: str, origin: Origin):
+def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, password: str, origin) -> Key:
+    """Check if an attempted License activation is occurring for a new user, not someone we've seen"""
+    import requests
+
+    current_app.logger.info(f"key activation check for user {email} from client {kunin_client_id} at {origin}")
+
+    user_details = {"user": {"email": email, "password": password, "client_id": key.kunin_client_id}}
+    new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=user_details)
+
+    if new_kunin_user.status_code == 201:
+        AuditLog.from_key(key, f"key activated for {email} of client ID {kunin_client_id} from {origin}",
+                          Event.KeyAccess)
+        return new_kunin_user.json()["user"]["kunin_employee_id"]
+    return None
+
+
+def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin: Origin) -> Activation:
     """Mark a key as activated by its token. Does not perform constant time
     comparisons.
 
     `ip`, `machine`, and `user` are of the originating activation attempt.
     """
     key = Key.query.filter_by(token=token, app_id=app_id, enabled=True).first()
+    activation = None
+    valid_or_ttl = key.valid_until if not key.ttl else key.ttl
 
     if key.remaining == -1:
         key.hwid = origin.hwid
@@ -224,9 +249,11 @@ def activate_key_unsafe(app_id: int, token: str, origin: Origin):
             key, f"failed activation attempt from {origin}",
             Event.FailedActivation)
 
-        raise ExhuastedActivations(
+        raise ExhaustedActivations(
             f"token {token} has exhausted all remaining activations")
 
+    if key.remaining:  # if we can activate, we activate
+        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl).save()
     key.remaining -= 1
 
     current_app.logger.info(f"new activation: Key {key!r} from {origin}."
@@ -241,3 +268,4 @@ def activate_key_unsafe(app_id: int, token: str, origin: Origin):
         key, f"new activation from {origin}", Event.AppActivation)
 
     db.session.commit()
+    return activation

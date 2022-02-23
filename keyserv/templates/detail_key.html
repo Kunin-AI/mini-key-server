@@ -54,8 +54,16 @@
                 {% endif %}</li>
                 <li class="list-group-item"><b>Cut On:</b>
                     {{ key.cutdate|datetime }}</li>
+                <li class="list-group-item"><b>Expiry:</b>
+                    {% if key.valid_until %}
+                        {{ key.valid_until }}
+                    {% elif key.ttl %}
+                        {{ key.ttl }} days remaining
+                    {% else %}
+                    Unset
+                    {% endif %}
+                </li>
                 {% if key.memo %}
-                <li class="list-group-item"><b>Expiry:</b> {{ key.valid_until if key.valid_until else "Unset" }}</li>
                 <li class="list-group-item"><b>Memo:</b> {{ key.memo }}</li>
                 {% endif %}
                 <li class="list-group-item"><b>Lifetime Activations:</b>
@@ -65,6 +73,15 @@
                 <li class="list-group-item"><b>Last Activation</b> on
                     {{ key.last_activation_ts|datetime }} from
                     {{ key.last_activation_ip }}</li>
+                {% endif %}
+
+                {% if key.activations %}
+                    <li class="list-group-item"><b>Activations</b><br>
+                    {% for activation in key.activations %}
+                        <li class="list-group-item">    Activated on {{ activation.activation_ts|datetime }} for Employee
+                        {{ activation.kunin_employee_id }} of Client {{ activation.kunin_client_id }} at
+                        {{ activation.activation_ip }}
+                    {% endfor %}
                 {% endif %}
 
 

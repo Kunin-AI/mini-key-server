@@ -27,12 +27,11 @@ from flask_caching import Cache
 
 from sqlalchemy import event
 from flask_sqlalchemy import SQLAlchemy, Model
-# from flask_bcrypt import Bcrypt
 from keyserv.uuidgenerator import UUIDGenerator
 
 basestring = (str, bytes)
-# bcrypt = Bcrypt()
 cache = Cache()
+
 
 class CRUDMixin(Model):
     """Mixin that adds convenience methods for CRUD (create, read, update, delete) operations."""
@@ -115,11 +114,13 @@ class Application(db.Model, SurrogatePK):
         self.name = name
         self.support_message = support_message
 
+
 @event.listens_for(Application, 'after_insert')
 def after_insert(_, connection, target):
     if not target.uuid:  # Generate UUID
         myuuid = UUIDGenerator.int_to_uuid(target.id).hex
         connection.execute(Application.__table__.update().where(Application.id == target.id).values(uuid=myuuid))
+
 
 class Key(db.Model, SurrogatePK):
     """
@@ -137,6 +138,7 @@ class Key(db.Model, SurrogatePK):
     cutdate = db.Column(db.DateTime(timezone=True))
     enabled = db.Column(db.Boolean, default=True)
     memo = db.Column(db.String)
+    kunin_client_id = db.Column(db.Integer)
     hwid = db.Column(db.String, default="")
     remaining = db.Column(db.Integer)
     token = db.Column(db.String, unique=True)
@@ -147,9 +149,10 @@ class Key(db.Model, SurrogatePK):
     last_check_ts = db.Column(db.DateTime)
     last_check_ip = db.Column(db.String)
     valid_until = db.Column(db.DateTime(timezone=True))
+    ttl = db.Column(db.Integer)
 
-    def __init__(self, token: str, remaining: int, app_id: int,
-                 enabled: bool = True, memo: str = "", hwid: str = "", expiry_date: str = "30") -> None:
+    def __init__(self, token: str, remaining: int, app_id: int, enabled: bool = True, memo: str = "", hwid: str = "",
+                 expiry_date: str = "30", kunin_client_id: int = 0) -> None:
         self.token = token
         self.remaining = remaining
         self.enabled = enabled
@@ -158,18 +161,62 @@ class Key(db.Model, SurrogatePK):
         self.hwid = hwid
         if expiry_date.isnumeric():
             self.valid_until = datetime.utcnow() + timedelta(days=int(expiry_date))
+            self.ttl = int(expiry_date)
         else:
             from dateutil.parser import parse
             self.valid_until = parse(expiry_date)
+            self.ttl = (datetime.utcnow() - self.valid_until).days
+        if kunin_client_id:
+            self.kunin_client_id = kunin_client_id
 
     def __str__(self):
         return f"<Key({self.token}) valid until {self.valid_until}>"
+
 
 @event.listens_for(Key, 'after_insert')
 def after_insert(_, connection, target):
     if not target.uuid:  # Generate UUID
         myuuid = UUIDGenerator.int_to_uuid(target.id).hex
         connection.execute(Key.__table__.update().where(Key.id == target.id).values(uuid=myuuid))
+
+
+class Activation(db.Model, SurrogatePK):
+    """
+    Database representation of the activation of a software key provided by MKS.
+
+    id: identifier for a activation
+    key: the key associated with this activation
+    valid_until: taking into account how the key was cut, the date when this is NO LONGER valid
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.relationship("Key", uselist=False, backref="activations")
+    key_id = db.Column(db.Integer,
+                       db.ForeignKey("key.id"), nullable=False)
+    activation_ts = db.Column(db.DateTime(timezone=True))
+    activation_ip = db.Column(db.String)
+    kunin_employee_id = db.Column(db.Integer)
+    kunin_client_id = db.Column(db.Integer)
+    valid_until = db.Column(db.DateTime(timezone=True))
+
+    def __init__(self, key_id: int, ip: str = "", kunin_client_id: int = 0, expiry_date: str = "30") -> None:
+        self.key_id = key_id
+        self.activation_ip = ip
+        self.kunin_client_id = kunin_client_id
+        if expiry_date.isnumeric():
+            self.valid_until = datetime.utcnow() + timedelta(days=int(expiry_date))
+        else:
+            from dateutil.parser import parse
+            self.valid_until = parse(expiry_date)
+
+    def __str__(self):
+        return f"<Activation [of Key({self.token})] valid until {self.valid_until}>"
+
+
+@event.listens_for(Activation, 'after_insert')
+def after_insert(_, connection, target):
+    if not target.uuid:  # Generate UUID
+        myuuid = UUIDGenerator.int_to_uuid(target.id).hex
+        connection.execute(Activation.__table__.update().where(Activation.id == target.id).values(uuid=myuuid))
 
 
 class Event(IntEnum):
@@ -208,10 +255,8 @@ class AuditLog(db.Model, SurrogatePK):
 
     @classmethod
     def from_key(cls, key: Key, message: str, event_type: Event):
-        # audit = cls(key.id, key.app.id, message, event_type)
         cls(key.id, key.app.id, message, event_type).save()
-        # db.session.add(audit)
-        # db.session.commit()
+
 
 @event.listens_for(AuditLog, 'after_insert')
 def after_insert(_, connection, target):

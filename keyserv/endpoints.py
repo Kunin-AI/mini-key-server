@@ -25,7 +25,7 @@ from flask import request
 from flask_restful import Api, Resource, reqparse
 
 from keyserv.keymanager import (Origin, activate_key_unsafe, key_exists_const,
-                                key_get_unsafe, key_valid_const, key_still_valid)
+                                key_get_unsafe, key_valid_const, key_still_valid, key_for_kunin_client_employee)
 from keyserv.models import Application
 
 api = Api()
@@ -49,6 +49,8 @@ class ActivateKey(Resource):
         parser.add_argument("app_id", required=True, type=int)
         parser.add_argument("hwid", required=True)
         parser.add_argument("valid_until", required=True)
+        parser.add_argument("email")
+        parser.add_argument("password")
         args = parser.parse_args()
 
         origin = Origin(request.remote_addr, args.machine,
@@ -75,11 +77,20 @@ class ActivateKey(Resource):
                     "support_message": key.app.support_message}
             return resp, 410
 
-        activate_key_unsafe(args.app_id, args.token, origin)
+        # setup the new account using the key's kunin_client_id, kunin_email and kunin_password
+        kunin_employee_id = key_for_kunin_client_employee(key, key.kunin_client_id, args.email, args.password, origin)
+        if not kunin_employee_id:
+            resp = {"result": "failure", "error": "this account is already registered (or has had a trial)",
+                    "support_message": key.app.support_message}
+            return resp, 410
+
+        activation = activate_key_unsafe(args.app_id, args.token, kunin_employee_id, origin)
 
         return {"result": "ok",
                 "remainingActivations": str(key.remaining),
-                "expiresOn": str(key.valid_until)}, 201
+                "expiresOn": str(activation.valid_until),
+                "kunin_employee_id": kunin_employee_id,
+                "kunin_client_id": key.kunin_client_id}, 201
 
 
 class CheckKey(Resource):
@@ -92,20 +103,24 @@ class CheckKey(Resource):
         parser.add_argument("user", required=True, location='args')
         parser.add_argument("hwid", required=True, location='args')
         parser.add_argument("app_id", required=True, type=int, location='args')
+        parser.add_argument("kunin_employee_id", required=True, type=int, location='args')
+        parser.add_argument("kunin_client_id", required=True, type=int, location='args')
 
         args = parser.parse_args()
 
-        origin = Origin(request.remote_addr,
-                        args.machine, args.user, args.hwid)
+        origin = Origin(request.remote_addr, args.machine, args.user, args.hwid)
 
         possibly_valid_key = key_valid_const(args.app_id, args.token, origin)
-        if possibly_valid_key and key_still_valid(possibly_valid_key):
+        activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
+        activation = activation[0] if activation else None
+        if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
             return {"result": "ok"}, 201
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
         else:
-            return {"result": "failure", "error": "invalid key; expired f{possibly_valid_key.valid_until}"}, 404
+            expiry = activation.valid_until if activation else possibly_valid_key.valid_until
+            return {"result": "failure", "error": "invalid key; expired f{expiry}"}, 404
 
 
 api.add_resource(ActivateKey, "/api/activate")
