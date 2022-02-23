@@ -114,7 +114,9 @@ class CheckKey(Resource):
         # activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
         # activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
-            return {"result": "ok"}, 201
+            from hmac import compare_digest
+            return {"result": "ok"}, 201 if not compare_digest(origin.hwid, possibly_valid_key.hwid) else \
+                {"result": "ok"}, 200
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
