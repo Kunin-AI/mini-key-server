@@ -207,7 +207,7 @@ def key_get_unsafe(app_id: int, token: str, origin) -> Key:
     return None
 
 
-def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, password: str, origin) -> Key:
+def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, password: str, origin) -> int:
     """Check if an attempted License activation is occurring for a new user, not someone we've seen"""
     import requests
 

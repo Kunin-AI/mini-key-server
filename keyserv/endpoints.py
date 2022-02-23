@@ -57,8 +57,7 @@ class ActivateKey(Resource):
                         args.user, args.hwid)
 
         if not key_exists_const(args.app_id, args.token, origin):
-            resp = {"result": "failure", "error": "invalid activation token",
-                    "support_message": None}
+            resp = {"result": "failure", "error": "invalid activation token", "support_message": None}
             if args.app_id:
                 app = Application.query.get(args.app_id)
                 if app and app.support_message:
@@ -103,16 +102,17 @@ class CheckKey(Resource):
         parser.add_argument("user", required=True, location='args')
         parser.add_argument("hwid", required=True, location='args')
         parser.add_argument("app_id", required=True, type=int, location='args')
-        parser.add_argument("kunin_employee_id", required=True, type=int, location='args')
-        parser.add_argument("kunin_client_id", required=True, type=int, location='args')
+        # parser.add_argument("kunin_employee_id", required=True, type=int, location='args')
+        # parser.add_argument("kunin_client_id", required=True, type=int, location='args')
 
         args = parser.parse_args()
 
         origin = Origin(request.remote_addr, args.machine, args.user, args.hwid)
 
         possibly_valid_key = key_valid_const(args.app_id, args.token, origin)
-        activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
-        activation = activation[0] if activation else None
+        activation = None
+        # activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
+        # activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
             return {"result": "ok"}, 201
 
