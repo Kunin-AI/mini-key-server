@@ -1,7 +1,5 @@
 on:
-  push:
-    branches:
-      - docker
+  workflow_dispatch:
 
 name: Build and upload container
 
