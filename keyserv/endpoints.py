@@ -113,8 +113,6 @@ class CheckKey(Resource):
         activation = None
         # activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
         # activation = activation[0] if activation else None
-        print('-----> POSSIBLY VALID KEY', possibly_valid_key)
-        print('-----> KEY STILL VALID?', key_still_valid(possibly_valid_key, activation))
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
             from hmac import compare_digest
             if not compare_digest(origin.hwid, possibly_valid_key.hwid):
