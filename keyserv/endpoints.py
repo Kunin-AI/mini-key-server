@@ -48,7 +48,6 @@ class ActivateKey(Resource):
         parser.add_argument("user", required=True)
         parser.add_argument("app_id", required=True, type=int)
         parser.add_argument("hwid", required=True)
-        # parser.add_argument("valid_until", required=True)
         parser.add_argument("email")
         parser.add_argument("password")
         args = parser.parse_args()
@@ -102,8 +101,8 @@ class CheckKey(Resource):
         parser.add_argument("user", required=True, location='args')
         parser.add_argument("hwid", required=True, location='args')
         parser.add_argument("app_id", required=True, type=int, location='args')
-        # parser.add_argument("kunin_employee_id", required=True, type=int, location='args')
-        # parser.add_argument("kunin_client_id", required=True, type=int, location='args')
+        parser.add_argument("kunin_employee_id", required=False, type=int, location='args')
+        parser.add_argument("kunin_client_id", required=False, type=int, location='args')
 
         args = parser.parse_args()
 
@@ -111,14 +110,17 @@ class CheckKey(Resource):
 
         possibly_valid_key = key_valid_const(args.app_id, args.token, origin)
         activation = None
-        # activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
-        # activation = activation[0] if activation else None
+        if args.kunin_employee_id and possibly_valid_key:
+            activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
+            activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
             from hmac import compare_digest
-            if not compare_digest(origin.hwid, possibly_valid_key.hwid):
+            if not activation and not compare_digest(origin.hwid, possibly_valid_key.hwid):
                 return {"result": "ok"}, 201
             else:
-                return {"result": "ok"}, 200
+                return {"result": "ok", "remainingActivations": str(possibly_valid_key.remaining), "expiresOn":
+                    str(activation.valid_until), "kunin_employee_id": args.kunin_employee_id, "kunin_client_id":
+                    possibly_valid_key.kunin_client_id}, 200
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
