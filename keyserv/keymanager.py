@@ -210,7 +210,7 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
 
     current_app.logger.info(f"key activation check for user {email} from client {kunin_client_id} at {origin}")
 
-    user_details = {"user": {"email": email, "password": password, "client_id": key.kunin_client_id}}
+    user_details = {"user": {"email": email, "password": password, "username": email, "client_id": key.kunin_client_id}}
     new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=json.dumps(user_details),
                                    headers={'Content-Type': 'application/json'})
 
@@ -220,6 +220,7 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
         return new_kunin_user.json()["user"]["kunin_employee_id"]
     else:  # check that the user may exist already for this client
         del user_details['user']['client_id']
+        del user_details['user']['username']
         existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users/login',
                                             data=json.dumps(user_details), headers={'Content-Type': 'application/json'})
         if existing_kunin_user.status_code == 200:
