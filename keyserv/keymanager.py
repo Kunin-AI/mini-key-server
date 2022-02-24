@@ -219,7 +219,7 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
         return new_kunin_user.json()["user"]["kunin_employee_id"]
     else:  # check that the user may exist already for this client
         del user_details['user']['client_id']
-        existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=user_details)
+        existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users/login', data=user_details)
         if existing_kunin_user.status_code == 200:
             return existing_kunin_user.json()['user']['kunin_employee_id']
     return None
