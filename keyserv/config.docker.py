@@ -17,7 +17,7 @@ class DefaultConfig(object):
 
 class ProductionConfig(DefaultConfig):
     SQLALCHEMY_DATABASE_URI = "sqlite:////data/sqlite.db"
-    KUNIN_API = 'https://app.kuninai.com'
+    KUNIN_API = 'https://api.kuninai.com'
 
 
 class DevelopmentConfig(DefaultConfig):
