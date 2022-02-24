@@ -206,13 +206,12 @@ def key_get_unsafe(app_id: int, token: str, origin) -> Key:
 
 def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, password: str, origin) -> int:
     """Check if an attempted License activation is occurring for a new user, not someone we've seen"""
-    import requests
+    import requests, json
 
     current_app.logger.info(f"key activation check for user {email} from client {kunin_client_id} at {origin}")
 
     user_details = {"user": {"email": email, "password": password, "client_id": key.kunin_client_id}}
-    print('CHECK ON USER: ', user_details)
-    new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=user_details,
+    new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=json.dumps(user_details),
                                    headers={'Content-Type': 'application/json'})
 
     if new_kunin_user.status_code == 201:
@@ -221,8 +220,8 @@ def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, pa
         return new_kunin_user.json()["user"]["kunin_employee_id"]
     else:  # check that the user may exist already for this client
         del user_details['user']['client_id']
-        existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users/login', data=user_details,
-                                            headers={'Content-Type': 'application/json'})
+        existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users/login',
+                                            data=json.dumps(user_details), headers={'Content-Type': 'application/json'})
         if existing_kunin_user.status_code == 200:
             return existing_kunin_user.json()['user']['kunin_employee_id']
     return None
