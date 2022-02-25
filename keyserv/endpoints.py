@@ -82,7 +82,7 @@ class ActivateKey(Resource):
                     "support_message": key.app.support_message}
             return resp, 410
 
-        activation = activate_key_unsafe(args.app_id, args.token, kunin_employee_id, origin)
+        activation = activate_key_unsafe(args.app_id, args.token, kunin_employee_id, origin, key)
 
         return {"result": "ok",
                 "remainingActivations": str(key.remaining),
@@ -114,13 +114,14 @@ class CheckKey(Resource):
             activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
             activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
-            from hmac import compare_digest
-            if not activation and not compare_digest(origin.hwid, possibly_valid_key.hwid):
+            # from hmac import compare_digest
+            if not activation:  # and not compare_digest(origin.hwid, possibly_valid_key.hwid):
                 return {"result": "ok"}, 201
             else:
-                return {"result": "ok", "remainingActivations": str(possibly_valid_key.remaining), "expiresOn":
-                    str(activation.valid_until), "kunin_employee_id": args.kunin_employee_id, "kunin_client_id":
-                    possibly_valid_key.kunin_client_id}, 200
+                expiry = {"expiresOn": str(activation.valid_until)} if activation else {}
+                return {**{"result": "ok", "remainingActivations": str(possibly_valid_key.remaining),
+                           "kunin_client_id": possibly_valid_key.kunin_client_id, "kunin_employee_id":
+                               args.kunin_employee_id}, **expiry}, 200
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404

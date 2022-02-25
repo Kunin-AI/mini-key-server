@@ -114,10 +114,10 @@ def modify_key(key_id: int):
             changes.append(f"active changed from {key.enabled}"
                            f" to {form.active.data}")
             key.enabled = form.active.data
-        if key.hwid != form.hwid.data:
-            changes.append(f"hwid changed from {key.hwid!r} to "
-                           f"{form.hwid.data!r}")
-            key.hwid = form.hwid.data
+        # if key.hwid != form.hwid.data:
+        #     changes.append(f"hwid changed from {key.hwid!r} to "
+        #                    f"{form.hwid.data!r}")
+        #     key.hwid = form.hwid.data
 
         AuditLog.from_key(key, f"edited by {current_user.username} "
                           f"({request.remote_addr}):"
@@ -134,7 +134,7 @@ def modify_key(key_id: int):
     form.active.data = key.enabled
     form.memo.data = key.memo
     form.activations.data = key.remaining
-    form.hwid.data = key.hwid
+    # form.hwid.data = key.hwid
 
     return render_template("add_modify.html",
                            header=f"Modify Key {key.id}", form=form)
