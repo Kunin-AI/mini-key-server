@@ -52,8 +52,7 @@ class ActivateKey(Resource):
         parser.add_argument("password")
         args = parser.parse_args()
 
-        origin = Origin(request.remote_addr, args.machine,
-                        args.user, args.hwid)
+        origin = Origin(request.remote_addr, args.machine, args.user, args.hwid)
 
         if not key_exists_const(args.app_id, args.token, origin):
             resp = {"result": "failure", "error": "invalid activation token", "support_message": None}
@@ -85,7 +84,7 @@ class ActivateKey(Resource):
         activation = activate_key_unsafe(args.app_id, args.token, kunin_employee_id, origin, key)
 
         return {"result": "ok",
-                "remainingActivations": str(key.remaining),
+                "remainingActivations": str(key.remaining) if key.remaining != -1 else 'unlimited',
                 "expiresOn": str(activation.valid_until),
                 "kunin_employee_id": kunin_employee_id,
                 "kunin_client_id": key.kunin_client_id}, 201

@@ -237,7 +237,6 @@ def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin:
     valid_or_ttl = key.valid_until if not key.ttl else key.ttl
 
     if key.remaining == -1:
-        key.hwid = origin.hwid
         current_app.logger.info(f"new unlimited activation: Key {key!r} from {origin}")
         AuditLog.from_key(key, f"new unlimited activation from from {origin}", Event.AppActivation)
 
@@ -247,7 +246,8 @@ def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin:
         raise ExhaustedActivations(f"token {token} has exhausted all remaining activations")
 
     if key.remaining:  # if we can activate, we activate
-        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl).save()
+        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl,
+                                origin.hwid).save()
     key.remaining -= 1 if key.remaining != -1 else 0
 
     current_app.logger.info(f"new activation: Key {key!r} from {origin}. remaining activations: {key.remaining}")
