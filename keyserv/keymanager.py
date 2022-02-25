@@ -246,7 +246,7 @@ def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin:
         raise ExhaustedActivations(f"token {token} has exhausted all remaining activations")
 
     if key.remaining:  # if we can activate, we activate
-        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl,
+        activation = Activation(key.id, origin.ip, key.kunin_client_id, kunin_employee_id, valid_or_ttl,
                                 origin.hwid).save()
     key.remaining -= 1 if key.remaining != -1 else 0
 
