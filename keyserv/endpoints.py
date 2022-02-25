@@ -111,23 +111,23 @@ class CheckKey(Resource):
         possibly_valid_key = key_valid_const(args.app_id, args.token, origin)
         activation = None
         if args.kunin_employee_id and possibly_valid_key:
-            activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id]
+            activation = [a for a in possibly_valid_key.activations if a.kunin_employee_id == args.kunin_employee_id
+                          and a.hwid == args.hwid]
             activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
-            # from hmac import compare_digest
-            if not activation:  # and not compare_digest(origin.hwid, possibly_valid_key.hwid):
+            if not activation:
                 return {"result": "ok"}, 201
             else:
                 expiry = {"expiresOn": str(activation.valid_until)} if activation else {}
-                return {**{"result": "ok", "remainingActivations": str(possibly_valid_key.remaining),
-                           "kunin_client_id": possibly_valid_key.kunin_client_id, "kunin_employee_id":
-                               args.kunin_employee_id}, **expiry}, 200
+                remaining = str(possibly_valid_key.remaining) if possibly_valid_key.remaining != -1 else 'unlimited'
+                return {**{"remainingActivations": remaining, "kunin_employee_id": args.kunin_employee_id,
+                           "result": "ok", "kunin_client_id": possibly_valid_key.kunin_client_id}, **expiry}, 200
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
         else:
             expiry = activation.valid_until if activation else possibly_valid_key.valid_until
-            return {"result": "failure", "error": "invalid key; expired f{expiry}"}, 404
+            return {"result": "failure", "error": f"invalid key; expired {expiry}"}, 404
 
 
 api.add_resource(ActivateKey, "/api/activate")

@@ -78,7 +78,7 @@
                 {% if key.activations %}
                     <li class="list-group-item"><b>Activations</b><br>
                     {% for activation in key.activations %}
-                        <li class="list-group-item">\tActivated on {{ activation.activation_ts|datetime }} for Employee
+                        <li class="list-group-item">Activated on {{ activation.activation_ts|datetime }} for Employee
                         {{ activation.kunin_employee_id }} of Client {{ activation.kunin_client_id }} at HWID:
                         {{ activation.hwid }} [{{ activation.activation_ip }}] valid until {{ activation.valid_until }}
                     {% endfor %}
