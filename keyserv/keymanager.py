@@ -180,20 +180,14 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
 
 
 def key_still_valid(key: Key, activation: Activation = None) -> bool:
-    from datetime import timedelta
-    if not key or (key.valid_until and key.valid_until < datetime.utcnow()) or (
-            key.ttl and key.cutdate + timedelta(days=key.ttl) < datetime.utcnow()):
-        return False
-    elif not activation or (activation in key.activations and activation.valid_until and
-                            activation.valid_until < datetime.utcnow()):
+    if not activation or (activation in key.activations and activation.valid_until
+                          and activation.valid_until > datetime.utcnow()):
         return True
-    else:
-        return False
+    return False
 
 
 def key_get_unsafe(app_id: int, token: str, origin) -> Key:
     """Get a key by its token using constant time comparison."""
-
     current_app.logger.info(f"key retrieval by token {token} from {origin}")
 
     key = Key.query.filter_by(app_id=app_id, token=token, enabled=True).first()
