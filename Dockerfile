@@ -14,6 +14,7 @@ COPY . .
 COPY keyserv/config.docker.py keyserv/config.py
 
 ENV FLASK_APP=keyserver.py
+ENV SECRET_KEY=this_key_server_is_secure
 
 ENTRYPOINT /app/entrypoint.sh
 

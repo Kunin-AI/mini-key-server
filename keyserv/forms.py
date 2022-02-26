@@ -42,7 +42,7 @@ class KeyForm(FlaskForm):
     valid_until = StringField("Expire On / TLL (number of days to live)", validators=[optional()])
     kunin_client_id = IntegerField("Kunin AI Client ID", default=0)
     memo = StringField("Memo")
-    hwid = StringField("Hardware Id")
+    # hwid = StringField("Hardware Id")
     submit = SubmitField("Submit")
 
 

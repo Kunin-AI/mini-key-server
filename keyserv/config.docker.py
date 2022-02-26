@@ -12,12 +12,16 @@ class DefaultConfig(object):
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///data/sqlite.db"
+    KUNIN_API = 'https://dev.kuninai.com'
 
 
 class ProductionConfig(DefaultConfig):
     SQLALCHEMY_DATABASE_URI = "sqlite:////data/sqlite.db"
+    KUNIN_API = 'https://api.kuninai.com'
 
-class DevelopmentConfig(ProductionConfig):
+
+class DevelopmentConfig(DefaultConfig):
     DEBUG = True
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = True
+    KUNIN_API = 'https://dev.kuninai.com'

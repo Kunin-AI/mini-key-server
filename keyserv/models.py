@@ -139,7 +139,7 @@ class Key(db.Model, SurrogatePK):
     enabled = db.Column(db.Boolean, default=True)
     memo = db.Column(db.String)
     kunin_client_id = db.Column(db.Integer)
-    hwid = db.Column(db.String, default="")
+    # hwid = db.Column(db.String, default="")
     remaining = db.Column(db.Integer)
     token = db.Column(db.String, unique=True)
     total_activations = db.Column(db.Integer, default=0)
@@ -151,14 +151,14 @@ class Key(db.Model, SurrogatePK):
     valid_until = db.Column(db.DateTime(timezone=True))
     ttl = db.Column(db.Integer)
 
-    def __init__(self, token: str, remaining: int, app_id: int, enabled: bool = True, memo: str = "", hwid: str = "",
+    def __init__(self, token: str, remaining: int, app_id: int, enabled: bool = True, memo: str = "", # hwid: str = "",
                  expiry_date: str = "30", kunin_client_id: int = 0) -> None:
         self.token = token
         self.remaining = remaining
         self.enabled = enabled
         self.memo = memo
         self.app_id = app_id
-        self.hwid = hwid
+        # self.hwid = hwid
         if expiry_date.isnumeric():
             self.valid_until = datetime.utcnow() + timedelta(days=int(expiry_date))
             self.ttl = int(expiry_date)
@@ -192,21 +192,26 @@ class Activation(db.Model, SurrogatePK):
     key = db.relationship("Key", uselist=False, backref="activations")
     key_id = db.Column(db.Integer,
                        db.ForeignKey("key.id"), nullable=False)
+    hwid = db.Column(db.String, default="")
     activation_ts = db.Column(db.DateTime(timezone=True))
     activation_ip = db.Column(db.String)
     kunin_employee_id = db.Column(db.Integer)
     kunin_client_id = db.Column(db.Integer)
     valid_until = db.Column(db.DateTime(timezone=True))
 
-    def __init__(self, key_id: int, ip: str = "", kunin_client_id: int = 0, expiry_date: str = "30") -> None:
+    def __init__(self, key_id: int, ip: str = "", kunin_client_id: int = 0, kunin_employee_id: int = 0, 
+                 expiry_date: str = "30", hwid: str = "") -> None:
         self.key_id = key_id
         self.activation_ip = ip
         self.kunin_client_id = kunin_client_id
-        if expiry_date.isnumeric():
+        self.kunin_employee_id = kunin_employee_id
+        self.hwid = hwid
+        if isinstance(expiry_date, int) or expiry_date.isnumeric():
             self.valid_until = datetime.utcnow() + timedelta(days=int(expiry_date))
         else:
             from dateutil.parser import parse
             self.valid_until = parse(expiry_date)
+        self.activation_ts = datetime.utcnow()
 
     def __str__(self):
         return f"<Activation [of Key({self.token})] valid until {self.valid_until}>"

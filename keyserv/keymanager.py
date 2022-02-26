@@ -73,18 +73,17 @@ def rand_token(length: int = 25,
     return "".join(secrets.choice(chars) for i in range(length))
 
 
-def token_exists_unsafe(token: str, hwid: str = "") -> bool:
+def token_exists_unsafe(token: str) -> bool:
     """Check if `token` exists in the token database. Does NOT perform constant
     time comparison. Should not be used in APIs """
-    return db.session.query(exists().where(Key.token == token)
-                                    .where(Key.hwid == hwid)).scalar()
+    return db.session.query(exists().where(Key.token == token)).scalar()
 
 
 def token_matches_hwid(token: str, hwid: str) -> bool:
-    """Check if the supplied hwid matches the hwid on a key"""
+    """Check if the supplied hwid matches the hwid on a key's activations"""
     k = Key.query(token=token)
 
-    return bool(_compare(hwid, k.hwid))
+    return any([bool(_compare(hwid, a.hwid)) for a in k.activations])
 
 
 def generate_token_unsafe() -> str:
@@ -171,10 +170,7 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
     current_app.logger.info(f"key lookup by token {token} from {origin}")
     found = False
     for key in Key.query.all():
-        if (compare_digest(token, key.token) and
-                key.enabled and key.app_id == app_id
-                and compare_digest(origin.hwid, key.hwid)):
-
+        if compare_digest(token, key.token) and key.enabled and key.app_id == app_id:
             found = key
             key.last_check_ts = datetime.utcnow()
             key.last_check_ip = origin.ip
@@ -184,20 +180,14 @@ def key_valid_const(app_id: int, token: str, origin: Origin) -> any:
 
 
 def key_still_valid(key: Key, activation: Activation = None) -> bool:
-    from datetime import timedelta
-    if not key or (key.valid_until and key.valid_until < datetime.utcnow()) or (
-            key.ttl and key.cutdate + timedelta(days=key.ttl) < datetime.utcnow()):
-        return False
-    elif not activation or (activation in key.activations and activation.valid_until and
-                            activation.valid_until < datetime.utcnow()):
+    if not activation or (activation in key.activations and activation.valid_until
+                          and activation.valid_until > datetime.utcnow()):
         return True
-    else:
-        return False
+    return False
 
 
 def key_get_unsafe(app_id: int, token: str, origin) -> Key:
     """Get a key by its token using constant time comparison."""
-
     current_app.logger.info(f"key retrieval by token {token} from {origin}")
 
     key = Key.query.filter_by(app_id=app_id, token=token, enabled=True).first()
@@ -209,63 +199,59 @@ def key_get_unsafe(app_id: int, token: str, origin) -> Key:
 
 def key_for_kunin_client_employee(key: Key, kunin_client_id: int, email: str, password: str, origin) -> int:
     """Check if an attempted License activation is occurring for a new user, not someone we've seen"""
-    import requests
+    import requests, json
 
     current_app.logger.info(f"key activation check for user {email} from client {kunin_client_id} at {origin}")
 
     user_details = {"user": {"email": email, "password": password, "client_id": key.kunin_client_id}}
-    new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=user_details)
+    new_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users', data=json.dumps(user_details),
+                                   headers={'Content-Type': 'application/json'})
 
     if new_kunin_user.status_code == 201:
         AuditLog.from_key(key, f"key activated for {email} of client ID {kunin_client_id} from {origin}",
                           Event.KeyAccess)
         return new_kunin_user.json()["user"]["kunin_employee_id"]
+    else:  # check that the user may exist already for this client
+        del user_details['user']['client_id']
+        existing_kunin_user = requests.post(current_app.config['KUNIN_API'] + '/api/v1/users/login',
+                                            data=json.dumps(user_details), headers={'Content-Type': 'application/json'})
+        if existing_kunin_user.status_code == 200:
+            return existing_kunin_user.json()['user']['kunin_employee_id']
     return None
 
 
-def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin: Origin) -> Activation:
+def activate_key_unsafe(app_id: int, token: str, kunin_employee_id: int, origin: Origin, key: Key = None) -> Activation:
     """Mark a key as activated by its token. Does not perform constant time
     comparisons.
 
     `ip`, `machine`, and `user` are of the originating activation attempt.
     """
-    key = Key.query.filter_by(token=token, app_id=app_id, enabled=True).first()
+    key = Key.query.filter_by(token=token, app_id=app_id, enabled=True).first() if not key else key
     activation = None
     valid_or_ttl = key.valid_until if not key.ttl else key.ttl
 
     if key.remaining == -1:
-        key.hwid = origin.hwid
-        current_app.logger.info(
-            f"new unlimited activation: Key {key!r} from {origin}")
-        AuditLog.from_key(
-            key, f"new unlimited activation from from {origin}",
-            Event.AppActivation)
-        return
+        current_app.logger.info(f"new unlimited activation: Key {key!r} from {origin}")
+        AuditLog.from_key(key, f"new unlimited activation from from {origin}", Event.AppActivation)
 
     if key.remaining == 0:
-        current_app.logger.info(
-            f"failed activation attempt: Key {key!r} from {origin}")
-        AuditLog.from_key(
-            key, f"failed activation attempt from {origin}",
-            Event.FailedActivation)
-
-        raise ExhaustedActivations(
-            f"token {token} has exhausted all remaining activations")
+        current_app.logger.info(f"failed activation attempt: Key {key!r} from {origin}")
+        AuditLog.from_key(key, f"failed activation attempt from {origin}", Event.FailedActivation)
+        raise ExhaustedActivations(f"token {token} has exhausted all remaining activations")
 
     if key.remaining:  # if we can activate, we activate
-        activation = Activation(key.id, origin.ip, kunin_employee_id, key.kunin_client_id, valid_or_ttl).save()
-    key.remaining -= 1
+        activation = Activation(key.id, origin.ip, key.kunin_client_id, kunin_employee_id, valid_or_ttl,
+                                origin.hwid).save()
+    key.remaining -= 1 if key.remaining != -1 else 0
 
-    current_app.logger.info(f"new activation: Key {key!r} from {origin}."
-                            f" remaining activations: {key.remaining}")
+    current_app.logger.info(f"new activation: Key {key!r} from {origin}. remaining activations: {key.remaining}")
 
     key.total_activations += 1
     key.last_activation_ts = datetime.utcnow()
     key.last_activation_ip = origin.ip
     key.hwid = origin.hwid
 
-    AuditLog.from_key(
-        key, f"new activation from {origin}", Event.AppActivation)
+    AuditLog.from_key(key, f"new activation from {origin}", Event.AppActivation)
 
     db.session.commit()
     return activation

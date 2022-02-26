@@ -78,20 +78,20 @@
                 {% if key.activations %}
                     <li class="list-group-item"><b>Activations</b><br>
                     {% for activation in key.activations %}
-                        <li class="list-group-item">    Activated on {{ activation.activation_ts|datetime }} for Employee
-                        {{ activation.kunin_employee_id }} of Client {{ activation.kunin_client_id }} at
-                        {{ activation.activation_ip }}
+                        <li class="list-group-item">Activated on {{ activation.activation_ts|datetime }} for Employee
+                        {{ activation.kunin_employee_id }} of Client {{ activation.kunin_client_id }} at HWID:
+                        {{ activation.hwid }} [{{ activation.activation_ip }}] valid until {{ activation.valid_until }}
                     {% endfor %}
                 {% endif %}
 
 
-                <li class="list-group-item"><b>Hardware Id</b>:
-                    {% if key.hwid %}
-                    <code>{{ key.hwid }}</code>
-                    {% else %}
-                    ⚠️ No Hardware Id ⚠️
-                    {% endif %}
-                </li>
+{#                <li class="list-group-item"><b>Hardware Id</b>:#}
+{#                    {% if key.hwid %}#}
+{#                    <code>{{ key.hwid }}</code>#}
+{#                    {% else %}#}
+{#                    ⚠️ No Hardware Id ⚠️#}
+{#                    {% endif %}#}
+{#                </li>#}
 
                 <li class="list-group-item"><b>Lifetime Checks:</b> {{ key.total_checks }}</li>
 
