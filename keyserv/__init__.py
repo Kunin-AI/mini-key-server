@@ -66,6 +66,7 @@ def create_app(config):
 
     @app.cli.command("initdb")
     def initdb_command():
+        print(f"DB {db.engine.url} ")
         db.create_all()
         print("database initialized")
 
