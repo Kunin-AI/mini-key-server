@@ -1,7 +1,11 @@
 on:
+  pull_request:
+    branches:
+      - master
+    types: [closed]
   workflow_dispatch:
 
-name: Build and upload container
+name: Build and upload PROD container
 
 jobs:
   build-backend:
@@ -31,6 +35,6 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ steps.login-ecr.outputs.registry }}/mini-key-server:dev-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/mini-key-server:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/mini-key-server:prod-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/mini-key-server:latest
         cache-from: type=gha
         cache-to: type=gha
