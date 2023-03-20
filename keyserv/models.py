@@ -192,7 +192,7 @@ class Activation(db.Model, SurrogatePK):
     key = db.relationship("Key", uselist=False, backref="activations")
     key_id = db.Column(db.Integer,
                        db.ForeignKey("key.id"), nullable=False)
-    hwid = db.Column(db.String, default="")
+    hwid = db.Column(db.String(128), default="")
     activation_ts = db.Column(db.DateTime(timezone=True))
     activation_ip = db.Column(db.String(64))
     kunin_employee_id = db.Column(db.Integer)
