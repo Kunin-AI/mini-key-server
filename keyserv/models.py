@@ -107,8 +107,8 @@ def reference_col(tablename, nullable=False, pk_name='id', **kwargs):
 
 class Application(db.Model, SurrogatePK):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False, unique=True)
-    support_message = db.Column(db.String)
+    name = db.Column(db.String(128), nullable=False, unique=True)
+    support_message = db.Column(db.String(255))
 
     def __init__(self, name=None, support_message=None):
         self.name = name
@@ -137,17 +137,17 @@ class Key(db.Model, SurrogatePK):
                        db.ForeignKey("application.id"), nullable=False)
     cutdate = db.Column(db.DateTime(timezone=True))
     enabled = db.Column(db.Boolean, default=True)
-    memo = db.Column(db.String)
+    memo = db.Column(db.String(512))
     kunin_client_id = db.Column(db.Integer)
     # hwid = db.Column(db.String, default="")
     remaining = db.Column(db.Integer)
-    token = db.Column(db.String, unique=True)
+    token = db.Column(db.String(512), unique=True)
     total_activations = db.Column(db.Integer, default=0)
     total_checks = db.Column(db.Integer, default=0)
     last_activation_ts = db.Column(db.DateTime)
-    last_activation_ip = db.Column(db.String)
+    last_activation_ip = db.Column(db.String(64))
     last_check_ts = db.Column(db.DateTime)
-    last_check_ip = db.Column(db.String)
+    last_check_ip = db.Column(db.String(64))
     valid_until = db.Column(db.DateTime(timezone=True))
     ttl = db.Column(db.Integer)
 
@@ -194,7 +194,7 @@ class Activation(db.Model, SurrogatePK):
                        db.ForeignKey("key.id"), nullable=False)
     hwid = db.Column(db.String, default="")
     activation_ts = db.Column(db.DateTime(timezone=True))
-    activation_ip = db.Column(db.String)
+    activation_ip = db.Column(db.String(64))
     kunin_employee_id = db.Column(db.Integer)
     kunin_client_id = db.Column(db.Integer)
     valid_until = db.Column(db.DateTime(timezone=True))
@@ -247,7 +247,7 @@ class AuditLog(db.Model, SurrogatePK):
     event_type = db.Column(db.Integer)
     key = db.relationship("Key", uselist=False, backref="logs")
     key_id = db.Column(db.Integer, db.ForeignKey("key.id"), nullable=False)
-    message = db.Column(db.String)
+    message = db.Column(db.String(512))
     timestamp = db.Column(db.DateTime)
 
     def __init__(self, key_id: int, app_id: int,
