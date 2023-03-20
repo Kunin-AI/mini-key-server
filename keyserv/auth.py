@@ -39,7 +39,7 @@ def add_user(username: str, password: bytes, level=500):
 
 class Users(db.Model, UserMixin):
     id = db.Column(db.Integer(), primary_key=True)
-    username = db.Column(db.String(), unique=True, nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=False)
     passwd = db.Column(db.LargeBinary(), nullable=False)
     level = db.Column(db.Integer())
 
