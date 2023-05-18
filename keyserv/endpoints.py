@@ -114,13 +114,11 @@ class CheckKey(Resource):
                           and a.hwid == args.hwid]
             activation = activation[0] if activation else None
         if possibly_valid_key and key_still_valid(possibly_valid_key, activation):
-            if not activation:
-                return {"result": "ok"}, 201
-            else:
-                expiry = {"expiresOn": str(activation.valid_until)} if activation else {}
-                remaining = str(possibly_valid_key.remaining) if possibly_valid_key.remaining != -1 else 'unlimited'
-                return {**{"remainingActivations": remaining, "kunin_employee_id": args.kunin_employee_id,
-                           "result": "ok", "kunin_client_id": possibly_valid_key.kunin_client_id}, **expiry}, 200
+            expiry = {"expiresOn": str(activation.valid_until)} if activation else {}
+            remaining = str(possibly_valid_key.remaining) if possibly_valid_key.remaining != -1 else 'unlimited'
+            return {**{"remainingActivations": remaining, "kunin_employee_id": args.kunin_employee_id,
+                       "result": "ok", "kunin_client_id": possibly_valid_key.kunin_client_id}, **expiry}, \
+                200 if activation else 201
 
         if not possibly_valid_key:
             return {"result": "failure", "error": "invalid key"}, 404
