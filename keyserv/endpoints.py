@@ -26,7 +26,7 @@ from flask_restful import Api, Resource, reqparse
 
 from keyserv.keymanager import (Origin, activate_key_unsafe, key_exists_const,
                                 key_get_unsafe, key_valid_const, key_still_valid, key_for_kunin_client_employee)
-from keyserv.models import Application
+from keyserv.models import Application, Key
 
 api = Api()
 
@@ -127,5 +127,25 @@ class CheckKey(Resource):
             return {"result": "failure", "error": f"invalid key; expired {expiry}"}, 404
 
 
+class GetAppId(Resource):
+    """Endpoint used for checking if a key is valid."""
+
+    def get(self):
+        """
+        Check if a key is valid
+        """
+        parser = reqparse.RequestParser()
+        parser.add_argument("token", required=True, location='args')
+
+        args = parser.parse_args()
+
+        key = Key.query.filter_by(token=args.token).first()
+        if key:
+            return {"result": "ok", "app_id": key.app_id}, 200
+        else:
+            return {"result": "failure", "error": "invalid key"}, 404
+
+
 api.add_resource(ActivateKey, "/api/activate")
 api.add_resource(CheckKey, "/api/check")
+api.add_resource(GetAppId, "/api/appid")
