@@ -34,6 +34,14 @@ from keyserv.models import Application, EarlyBirdApplication, Key, db
 api = Api()
 
 
+def _cors_headers():
+    return {
+        "Access-Control-Allow-Origin": "https://firstbell.1000ml.io",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    }
+
+
 class ActivateKey(Resource):
     """Endpoint used for key activation."""
 
@@ -196,6 +204,9 @@ class ClaimKey(Resource):
 class ApplyEarlyBird(Resource):
     """Public endpoint for First Bell early access applications."""
 
+    def options(self):
+        return "", 204, _cors_headers()
+
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("name", required=True)
@@ -211,7 +222,7 @@ class ApplyEarlyBird(Resource):
 
         existing = EarlyBirdApplication.query.filter_by(email=args.email).first()
         if existing:
-            return {"result": "ok", "message": "already applied"}, 200
+            return {"result": "ok", "message": "already applied"}, 200, _cors_headers()
 
         app = EarlyBirdApplication(
             name=args.name,
@@ -227,15 +238,18 @@ class ApplyEarlyBird(Resource):
         db.session.add(app)
         db.session.commit()
 
-        return {"result": "ok", "message": "application received"}, 201
+        return {"result": "ok", "message": "application received"}, 201, _cors_headers()
 
 
 class EarlyBirdSpots(Resource):
     """Public endpoint returning how many First Bell spots remain."""
 
+    def options(self):
+        return "", 204, _cors_headers()
+
     def get(self):
         claimed = EarlyBirdApplication.query.filter_by(status=1).count()
-        return {"total": 20, "claimed": claimed}, 200
+        return {"total": 20, "claimed": claimed}, 200, _cors_headers()
 
 
 api.add_resource(ActivateKey, "/api/activate")

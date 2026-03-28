@@ -49,7 +49,7 @@ data:
       - hostname: licenses.1000ml.io
         service: http://ku-keyserver:80
       - hostname: firstbell.1000ml.io
-        service: http://ku-keyserver:80
+        service: http://firstbell-landing:80
       - service: http_status:404
 ---
 apiVersion: apps/v1

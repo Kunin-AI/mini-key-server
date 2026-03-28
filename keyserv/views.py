@@ -43,10 +43,6 @@ def favicon():
 
 @frontend.route("/", methods=["GET", "POST"])
 def index():
-    # serve the landing page when accessed via the earlyaccess subdomain
-    if "firstbell" in request.host:
-        return render_template("earlybird_landing.html")
-
     form = LoginForm(request.form)
 
     if request.method == "POST" and form.validate():
@@ -360,4 +356,4 @@ def earlybird_reject(app_id):
 
 @frontend.route("/earlyaccess")
 def earlybird_landing():
-    return render_template("earlybird_landing.html")
+    return redirect("https://firstbell.1000ml.io")
