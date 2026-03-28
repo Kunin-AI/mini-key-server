@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+
+{% block title %}Mini Key Server - First Bell Applications{% endblock%}
+
+{% block container %}
+<h2>First Bell Applications</h2>
+
+<div style="margin-bottom: 15px;">
+    <a href="{{ url_for('frontend.earlybird_list') }}" class="btn btn-default {% if not status_filter %}active{% endif %}">All</a>
+    <a href="{{ url_for('frontend.earlybird_list', status='pending') }}" class="btn btn-default {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+    <a href="{{ url_for('frontend.earlybird_list', status='approved') }}" class="btn btn-default {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
+    <a href="{{ url_for('frontend.earlybird_list', status='rejected') }}" class="btn btn-default {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
+</div>
+
+{% if applications %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>School</th>
+            <th>Subjects</th>
+            <th>Status</th>
+            <th>Applied</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for app in applications %}
+        <tr>
+            <td>{{ app.name }}</td>
+            <td>{{ app.email }}</td>
+            <td>{{ app.school }}</td>
+            <td>{{ app.subjects }}</td>
+            <td>
+                {% if app.status == 0 %}
+                <span class="label label-warning">Pending</span>
+                {% elif app.status == 1 %}
+                <span class="label label-success">Approved</span>
+                {% else %}
+                <span class="label label-danger">Rejected</span>
+                {% endif %}
+            </td>
+            <td>{{ app.applied_at|datetime }}</td>
+            <td>
+                <a href="{{ url_for('frontend.earlybird_detail', app_id=app.id) }}" class="btn btn-primary btn-sm">
+                    <span class="glyphicon glyphicon-info-sign"></span> View
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="lead">No applications yet.</p>
+{% endif %}
+{%- endblock %}

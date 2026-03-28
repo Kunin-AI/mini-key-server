@@ -150,6 +150,8 @@ class Key(db.Model, SurrogatePK):
     last_check_ip = db.Column(db.String(64))
     valid_until = db.Column(db.DateTime(timezone=True))
     ttl = db.Column(db.Integer)
+    claimed_by = db.Column(db.String(255))
+    claimed_at = db.Column(db.DateTime)
 
     def __init__(self, token: str, remaining: int, app_id: int, enabled: bool = True, memo: str = "", # hwid: str = "",
                  expiry_date: str = "30", kunin_client_id: int = 0) -> None:
@@ -268,3 +270,35 @@ def after_insert(_, connection, target):
     if not target.uuid:  # Generate UUID
         myuuid = UUIDGenerator.int_to_uuid(target.id).hex
         connection.execute(AuditLog.__table__.update().where(AuditLog.id == target.id).values(uuid=myuuid))
+
+
+class EarlyBirdApplication(db.Model, SurrogatePK):
+    __tablename__ = 'early_bird_application'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    school = db.Column(db.String(255))
+    subjects = db.Column(db.String(512))
+    grade_levels = db.Column(db.String(255))
+    class_size = db.Column(db.String(64))
+    uses_handwritten_tests = db.Column(db.String(32))
+    how_heard = db.Column(db.String(512))
+    motivation = db.Column(db.Text)
+    status = db.Column(db.Integer, default=0)  # 0=pending, 1=approved, 2=rejected
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewer_notes = db.Column(db.Text, nullable=True)
+    key_id = db.Column(db.Integer, db.ForeignKey('key.id'), nullable=True)
+    key = db.relationship('Key', uselist=False, backref='early_bird_application')
+
+
+@event.listens_for(EarlyBirdApplication, 'after_insert')
+def after_insert(_, connection, target):
+    if not target.uuid:
+        myuuid = UUIDGenerator.int_to_uuid(target.id).hex
+        connection.execute(
+            EarlyBirdApplication.__table__.update()
+            .where(EarlyBirdApplication.id == target.id)
+            .values(uuid=myuuid)
+        )

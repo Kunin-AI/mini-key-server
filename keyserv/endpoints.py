@@ -21,12 +21,15 @@
 # SOFTWARE.
 
 
-from flask import request
+import hmac
+from datetime import datetime
+
+from flask import request, current_app
 from flask_restful import Api, Resource, reqparse
 
 from keyserv.keymanager import (Origin, activate_key_unsafe, key_exists_const,
                                 key_get_unsafe, key_valid_const, key_still_valid, key_for_kunin_client_employee)
-from keyserv.models import Application, Key
+from keyserv.models import Application, EarlyBirdApplication, Key, db
 
 api = Api()
 
@@ -75,11 +78,13 @@ class ActivateKey(Resource):
             return resp, 410
 
         # setup the new account using the key's kunin_client_id, kunin_email and kunin_password
-        kunin_employee_id = key_for_kunin_client_employee(key, key.kunin_client_id, args.email, args.password, origin)
-        if not kunin_employee_id:
-            resp = {"result": "failure", "error": "this account is already registered (or has had a trial)",
-                    "support_message": key.app.support_message}
-            return resp, 410
+        kunin_employee_id = 0
+        if key.kunin_client_id:
+            kunin_employee_id = key_for_kunin_client_employee(key, key.kunin_client_id, args.email, args.password, origin)
+            if not kunin_employee_id:
+                resp = {"result": "failure", "error": "this account is already registered (or has had a trial)",
+                        "support_message": key.app.support_message}
+                return resp, 410
 
         activation = activate_key_unsafe(args.app_id, args.token, kunin_employee_id, origin, key)
 
@@ -146,6 +151,96 @@ class GetAppId(Resource):
             return {"result": "failure", "error": "invalid key"}, 404
 
 
+class ClaimKey(Resource):
+    """Allocate an unclaimed key from the pool for a given email."""
+
+    def post(self):
+        api_key = request.headers.get("X-Api-Key", "")
+        expected = current_app.config.get("CLAIM_API_KEY", "")
+        if not expected or not hmac.compare_digest(api_key, expected):
+            return {"result": "failure", "error": "unauthorized"}, 401
+
+        parser = reqparse.RequestParser()
+        parser.add_argument("email", required=True)
+        parser.add_argument("app_id", required=True, type=int)
+        parser.add_argument("name", required=False)
+        args = parser.parse_args()
+
+        # check if this email already claimed a key for this app
+        existing = Key.query.filter_by(app_id=args.app_id, claimed_by=args.email).first()
+        if existing:
+            token = existing.token
+            formatted = '-'.join([token[i:i+5] for i in range(0, len(token), 5)])
+            return {"result": "ok", "token": formatted, "already_claimed": True}, 200
+
+        # find an unclaimed key with remaining activations
+        key = Key.query.filter_by(app_id=args.app_id, claimed_by=None, enabled=True) \
+            .filter(Key.remaining != 0).first()
+
+        if not key:
+            return {"result": "failure", "error": "no keys available"}, 410
+
+        key.claimed_by = args.email
+        key.claimed_at = datetime.utcnow()
+        if args.name:
+            key.memo = f"early-tester: {args.name} <{args.email}>"
+        else:
+            key.memo = f"early-tester: {args.email}"
+        db.session.commit()
+
+        token = key.token
+        formatted = '-'.join([token[i:i+5] for i in range(0, len(token), 5)])
+        return {"result": "ok", "token": formatted, "already_claimed": False}, 201
+
+
+class ApplyEarlyBird(Resource):
+    """Public endpoint for First Bell early access applications."""
+
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument("name", required=True)
+        parser.add_argument("email", required=True)
+        parser.add_argument("school", required=True)
+        parser.add_argument("subjects", required=True)
+        parser.add_argument("grade_levels", required=True)
+        parser.add_argument("class_size", required=True)
+        parser.add_argument("uses_handwritten_tests", required=True)
+        parser.add_argument("motivation", required=True)
+        parser.add_argument("how_heard")
+        args = parser.parse_args()
+
+        existing = EarlyBirdApplication.query.filter_by(email=args.email).first()
+        if existing:
+            return {"result": "ok", "message": "already applied"}, 200
+
+        app = EarlyBirdApplication(
+            name=args.name,
+            email=args.email,
+            school=args.school,
+            subjects=args.subjects,
+            grade_levels=args.grade_levels,
+            class_size=args.class_size,
+            uses_handwritten_tests=args.uses_handwritten_tests,
+            motivation=args.motivation,
+            how_heard=args.how_heard or "",
+        )
+        db.session.add(app)
+        db.session.commit()
+
+        return {"result": "ok", "message": "application received"}, 201
+
+
+class EarlyBirdSpots(Resource):
+    """Public endpoint returning how many First Bell spots remain."""
+
+    def get(self):
+        claimed = EarlyBirdApplication.query.filter_by(status=1).count()
+        return {"total": 20, "claimed": claimed}, 200
+
+
 api.add_resource(ActivateKey, "/api/activate")
 api.add_resource(CheckKey, "/api/check")
 api.add_resource(GetAppId, "/api/appid")
+api.add_resource(ClaimKey, "/api/claim")
+api.add_resource(ApplyEarlyBird, "/api/apply")
+api.add_resource(EarlyBirdSpots, "/api/spots")

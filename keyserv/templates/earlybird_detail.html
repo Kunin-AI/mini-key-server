@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block title %}Mini Key Server - Application Detail{% endblock%}
+
+{% block container %}
+<h2>Application from {{ app.name }}</h2>
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Application Details
+        {% if app.status == 0 %}
+        <span class="label label-warning pull-right">Pending</span>
+        {% elif app.status == 1 %}
+        <span class="label label-success pull-right">Approved</span>
+        {% else %}
+        <span class="label label-danger pull-right">Rejected</span>
+        {% endif %}
+    </div>
+    <div class="panel-body">
+        {% if app.status == 0 %}
+        <form method="POST" action="{{ url_for('frontend.earlybird_approve', app_id=app.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-success">
+                <span class="glyphicon glyphicon-ok"></span> Approve
+            </button>
+        </form>
+        <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rejectModal">
+            <span class="glyphicon glyphicon-remove"></span> Reject
+        </button>
+        <br/><br/>
+        {% endif %}
+
+        <ul class="list-group">
+            <li class="list-group-item"><b>Name:</b> {{ app.name }}</li>
+            <li class="list-group-item"><b>Email:</b> {{ app.email }}</li>
+            <li class="list-group-item"><b>School:</b> {{ app.school }}</li>
+            <li class="list-group-item"><b>Subjects:</b> {{ app.subjects }}</li>
+            <li class="list-group-item"><b>Grade Levels:</b> {{ app.grade_levels }}</li>
+            <li class="list-group-item"><b>Class Size:</b> {{ app.class_size }}</li>
+            <li class="list-group-item"><b>Uses Handwritten Tests:</b> {{ app.uses_handwritten_tests }}</li>
+            <li class="list-group-item"><b>Motivation:</b> {{ app.motivation }}</li>
+            {% if app.how_heard %}
+            <li class="list-group-item"><b>How They Heard:</b> {{ app.how_heard }}</li>
+            {% endif %}
+            <li class="list-group-item"><b>Applied:</b> {{ app.applied_at|datetime }}</li>
+            {% if app.reviewed_at %}
+            <li class="list-group-item"><b>Reviewed:</b> {{ app.reviewed_at|datetime }}</li>
+            {% endif %}
+            {% if app.status == 1 and app.key %}
+            <li class="list-group-item"><b>Allocated Key:</b> <code>{{ app.key.token }}</code></li>
+            {% endif %}
+            {% if app.status == 2 and app.reviewer_notes %}
+            <li class="list-group-item"><b>Reviewer Notes:</b> {{ app.reviewer_notes }}</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+{% if app.status == 0 %}
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('frontend.earlybird_reject', app_id=app.id) }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Reject Application</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="reviewer_notes">Notes (optional)</label>
+                        <textarea class="form-control" name="reviewer_notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<a href="{{ url_for('frontend.earlybird_list') }}" class="btn btn-default">
+    <span class="glyphicon glyphicon-arrow-left"></span> Back to List
+</a>
+{%- endblock %}

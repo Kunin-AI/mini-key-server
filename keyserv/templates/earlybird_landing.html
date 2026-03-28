@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Bell - Teacher's Pet Early Access</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+        /* Hero */
+        .hero {
+            padding: 80px 0 60px;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(15, 118, 110, 0.2);
+            border: 1px solid #0f766e;
+            color: #5eead4;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1.15;
+            color: #f8fafc;
+            margin-bottom: 20px;
+        }
+        .hero h1 em {
+            font-style: normal;
+            color: #fb923c;
+        }
+        .hero p {
+            font-size: 18px;
+            color: #94a3b8;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* Spots counter */
+        .spots {
+            text-align: center;
+            margin: 0 0 48px;
+        }
+        .spots-count {
+            display: inline-block;
+            background: rgba(15, 118, 110, 0.15);
+            border: 1px solid rgba(15, 118, 110, 0.4);
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-size: 18px;
+            color: #5eead4;
+        }
+        .spots-count strong {
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        /* How it works */
+        .section { padding: 48px 0; }
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .step {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+        }
+        .step-num {
+            width: 40px;
+            height: 40px;
+            background: #0f766e;
+            color: #f0fdfa;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 14px;
+        }
+        .step h3 {
+            font-size: 16px;
+            color: #f8fafc;
+            margin-bottom: 8px;
+        }
+        .step p {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* The deal */
+        .deal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .deal-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 28px;
+        }
+        .deal-card h3 {
+            font-size: 18px;
+            color: #f8fafc;
+            margin-bottom: 16px;
+        }
+        .deal-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .deal-card li {
+            padding: 6px 0;
+            color: #cbd5e1;
+            font-size: 15px;
+        }
+        .deal-card li::before {
+            content: "- ";
+            color: #0f766e;
+            font-weight: 700;
+        }
+
+        /* Form */
+        .form-section {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 48px;
+        }
+        .form-section h2 {
+            font-size: 24px;
+            color: #f8fafc;
+            margin-bottom: 8px;
+        }
+        .form-section .subtitle {
+            color: #94a3b8;
+            margin-bottom: 28px;
+            font-size: 15px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .form-group label .req {
+            color: #fb923c;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        input[type="text"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #f1f5f9;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #0f766e;
+        }
+        textarea { resize: vertical; min-height: 100px; }
+
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .checkbox-group label, .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 400;
+            font-size: 14px;
+            color: #cbd5e1;
+            cursor: pointer;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        .checkbox-group input:checked + span,
+        .radio-group input:checked + span {
+            color: #5eead4;
+        }
+        .checkbox-group label:has(input:checked),
+        .radio-group label:has(input:checked) {
+            border-color: #0f766e;
+            background: rgba(15, 118, 110, 0.15);
+        }
+        input[type="checkbox"], input[type="radio"] {
+            accent-color: #0f766e;
+        }
+
+        .subject-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #fb923c;
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .btn-submit:hover { background: #f97316; }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .form-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .success-state {
+            text-align: center;
+            padding: 40px 20px;
+            display: none;
+        }
+        .success-state h2 {
+            color: #5eead4;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .success-state p {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        /* FAQ */
+        .faq { margin-bottom: 60px; }
+        .faq-item {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .faq-q {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .faq-q::after {
+            content: "+";
+            font-size: 20px;
+            color: #64748b;
+            transition: transform 0.2s;
+        }
+        .faq-item.open .faq-q::after {
+            content: "-";
+        }
+        .faq-a {
+            display: none;
+            padding: 0 20px 16px;
+            color: #94a3b8;
+            font-size: 15px;
+        }
+        .faq-item.open .faq-a { display: block; }
+
+        footer {
+            text-align: center;
+            padding: 32px 0;
+            color: #475569;
+            font-size: 13px;
+            border-top: 1px solid #1e293b;
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 28px; }
+            .steps { grid-template-columns: 1fr; }
+            .deal { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .subject-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-section { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <section class="hero">
+        <div class="hero-badge">First Bell Program</div>
+        <h1>Grade a Stack of Tests During Your Planning Period. <em>Not After Dinner.</em></h1>
+        <p>Teacher's Pet uses AI to read handwritten answers and grade tests in minutes. We're giving 20 teachers free-for-life licenses. No catch.</p>
+    </section>
+
+    <div class="spots">
+        <div class="spots-count">
+            <strong id="spots-remaining">--</strong> of 20 spots remaining
+        </div>
+    </div>
+
+    <section class="section">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Scan Your Tests</h3>
+                <p>Use any scanner or phone camera. PDFs, images, whatever you have.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Set Up Once</h3>
+                <p>Draw boxes around answer regions. Create a template. Reuse it forever.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Grade in Bulk</h3>
+                <p>Drop a stack of scans. AI reads handwriting, compares to your key, scores everything.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">The Deal</h2>
+        <div class="deal">
+            <div class="deal-card">
+                <h3>What you get</h3>
+                <ul>
+                    <li>Free license, forever. Not a trial.</li>
+                    <li>All current and future features</li>
+                    <li>Direct line to the dev team</li>
+                    <li>Your feedback shapes the product</li>
+                </ul>
+            </div>
+            <div class="deal-card">
+                <h3>What we ask</h3>
+                <ul>
+                    <li>Actually use it (at least once a month)</li>
+                    <li>Tell us what's broken or annoying</li>
+                    <li>Let us share your anonymized usage data</li>
+                    <li>Be patient — it's early software</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="form-section" id="form-section">
+        <h2>Apply for Early Access</h2>
+        <p class="subtitle">Takes about 2 minutes. We review applications manually.</p>
+
+        <div class="form-error" id="form-error"></div>
+
+        <form id="apply-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full name <span class="req">*</span></label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email <span class="req">*</span></label>
+                    <input type="email" name="email" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>School <span class="req">*</span></label>
+                <input type="text" name="school" required>
+            </div>
+
+            <div class="form-group">
+                <label>Subjects you teach <span class="req">*</span></label>
+                <div class="subject-grid checkbox-group">
+                    <label><input type="checkbox" name="subjects" value="Math"><span>Math</span></label>
+                    <label><input type="checkbox" name="subjects" value="Science"><span>Science</span></label>
+                    <label><input type="checkbox" name="subjects" value="English"><span>English</span></label>
+                    <label><input type="checkbox" name="subjects" value="History"><span>History</span></label>
+                    <label><input type="checkbox" name="subjects" value="Geography"><span>Geography</span></label>
+                    <label><input type="checkbox" name="subjects" value="Other"><span>Other</span></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Grade levels <span class="req">*</span></label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="grade_levels" value="K-5"><span>K-5</span></label>
+                    <label><input type="checkbox" name="grade_levels" value="6-8"><span>6-8</span></label>
+                    <label><input type="checkbox" name="grade_levels" value="9-12"><span>9-12</span></label>
+                    <label><input type="checkbox" name="grade_levels" value="University"><span>University</span></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Typical class size <span class="req">*</span></label>
+                <div class="radio-group">
+                    <label><input type="radio" name="class_size" value="Under 20" required><span>Under 20</span></label>
+                    <label><input type="radio" name="class_size" value="20-30"><span>20-30</span></label>
+                    <label><input type="radio" name="class_size" value="30-40"><span>30-40</span></label>
+                    <label><input type="radio" name="class_size" value="40+"><span>40+</span></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Do your tests include handwritten answers? <span class="req">*</span></label>
+                <div class="radio-group">
+                    <label><input type="radio" name="uses_handwritten_tests" value="yes" required><span>Yes, always</span></label>
+                    <label><input type="radio" name="uses_handwritten_tests" value="sometimes"><span>Sometimes</span></label>
+                    <label><input type="radio" name="uses_handwritten_tests" value="no"><span>No, typed/MC only</span></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Describe your worst grading experience <span class="req">*</span></label>
+                <textarea name="motivation" required placeholder="That time you spent your entire Sunday grading 120 physics exams..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>How did you hear about us?</label>
+                <input type="text" name="how_heard" placeholder="Twitter, a colleague, Google, etc.">
+            </div>
+
+            <button type="submit" class="btn-submit" id="submit-btn">Apply for First Bell</button>
+        </form>
+    </section>
+
+    <div class="success-state" id="success-state">
+        <h2>You're in the queue!</h2>
+        <p>We review applications within 48 hours. Check your email for updates.<br>If you're approved, you'll get a license key directly.</p>
+    </div>
+
+    <section class="faq section">
+        <h2 class="section-title">FAQ</h2>
+        <div class="faq-item">
+            <div class="faq-q">What exactly is Teacher's Pet?</div>
+            <div class="faq-a">A desktop app (Mac/Windows) that reads scanned test papers — including handwritten answers — and grades them against your answer key using AI. You define regions on the page, it does the rest.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">What does "free for life" actually mean?</div>
+            <div class="faq-a">Your license never expires and you'll never be charged. When we launch paid tiers, First Bell members keep full access at no cost. Forever.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Do I need special hardware?</div>
+            <div class="faq-a">Any computer running macOS or Windows. For scanning, a flatbed scanner works best, but phone photos work too. The AI runs on our servers, so your machine doesn't need a GPU.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Is my students' data safe?</div>
+            <div class="faq-a">Test images are processed and never stored on our servers. Everything stays on your machine. We only collect anonymized usage metrics (e.g., "graded 30 tests") to improve the product.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">What if I apply and don't get in?</div>
+            <div class="faq-a">We'll keep your application on file. If we expand the program or spots open up, you'll be first in line.</div>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <div class="container">
+        &copy; 2026 1000ml. Teacher's Pet is a 1000ml product.
+    </div>
+</footer>
+
+<script>
+    // Spots counter
+    function updateSpots() {
+        fetch('/api/spots')
+            .then(r => r.json())
+            .then(data => {
+                const remaining = data.total - data.claimed;
+                document.getElementById('spots-remaining').textContent = remaining;
+            })
+            .catch(() => {});
+    }
+    updateSpots();
+    setInterval(updateSpots, 30000);
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(q => {
+        q.addEventListener('click', () => {
+            q.parentElement.classList.toggle('open');
+        });
+    });
+
+    // Form submission
+    document.getElementById('apply-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('form-error');
+        errorEl.style.display = 'none';
+
+        // collect checkbox values
+        const subjects = Array.from(form.querySelectorAll('input[name="subjects"]:checked'))
+            .map(cb => cb.value).join(', ');
+        const gradeLevels = Array.from(form.querySelectorAll('input[name="grade_levels"]:checked'))
+            .map(cb => cb.value).join(', ');
+
+        if (!subjects) {
+            errorEl.textContent = 'Please select at least one subject.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        if (!gradeLevels) {
+            errorEl.textContent = 'Please select at least one grade level.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+
+        const body = new URLSearchParams();
+        body.append('name', form.querySelector('[name="name"]').value);
+        body.append('email', form.querySelector('[name="email"]').value);
+        body.append('school', form.querySelector('[name="school"]').value);
+        body.append('subjects', subjects);
+        body.append('grade_levels', gradeLevels);
+        body.append('class_size', form.querySelector('[name="class_size"]:checked').value);
+        body.append('uses_handwritten_tests', form.querySelector('[name="uses_handwritten_tests"]:checked').value);
+        body.append('motivation', form.querySelector('[name="motivation"]').value);
+        const howHeard = form.querySelector('[name="how_heard"]').value;
+        if (howHeard) body.append('how_heard', howHeard);
+
+        try {
+            const resp = await fetch('/api/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            });
+            const data = await resp.json();
+
+            if (resp.ok) {
+                document.getElementById('form-section').style.display = 'none';
+                document.getElementById('success-state').style.display = 'block';
+                updateSpots();
+            } else {
+                errorEl.textContent = data.message || 'Something went wrong. Try again.';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Apply for First Bell';
+            }
+        } catch (err) {
+            errorEl.textContent = 'Network error. Check your connection and try again.';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Apply for First Bell';
+        }
+    });
+</script>
+
+</body>
+</html>
