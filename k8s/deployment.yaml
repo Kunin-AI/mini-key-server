@@ -124,7 +124,11 @@ metadata:
   labels:
     app: cloudflared
 spec:
-  replicas: 1
+  replicas: 2
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
   selector:
     matchLabels:
       app: cloudflared
@@ -133,9 +137,32 @@ spec:
       labels:
         app: cloudflared
     spec:
+      # N-C tunnels HA (K8S-NODE-ROLES-PLAN.md): 2 copies on 2 different nodes (hard rule,
+      # DoNotSchedule; matchLabelKeys so a rolling update spreads the new copies too),
+      # prefer edge (gpu1) + app (pxe). preferred-only rules left copies doubled on gpu1.
+      # 1000ml-critical must exist in the cluster before this is applied.
+      priorityClassName: 1000ml-critical
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys: [pod-template-hash]
+          labelSelector:
+            matchLabels:
+              app: cloudflared
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - {key: 1000ml.io/role, operator: In, values: [edge, app]}
+      tolerations:  # leave a dead node in 30 s
+        - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30}
+        - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30}
       containers:
         - name: cloudflared
-          image: cloudflare/cloudflared:latest
+          image: cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6
           args:
             - tunnel
             - --config
@@ -162,3 +189,15 @@ spec:
         - name: credentials
           secret:
             secretName: tunnel-credentials
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloudflared
+  namespace: ku-keyserver
+spec:
+  minAvailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      app: cloudflared
